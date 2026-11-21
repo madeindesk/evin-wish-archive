@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Evin Wish Archive - Mic Test</title>
+</head>
+<body>
+  <h2>Microphone Test</h2>
+  <button onclick="testMic()">Test Microphone</button>
+  <p id="status">Waiting...</p>
+
+  <script>
+    async function testMic() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        document.getElementById("status").innerText =
+          "Microphone working successfully!";
+        stream.getTracks().forEach(track => track.stop());
+      } catch (error) {
+        document.getElementById("status").innerText =
+          "Error: " + error.message;
+      }
+    }
+  </script>
+</body>
+</html>
