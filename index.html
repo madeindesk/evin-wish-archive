@@ -1,25 +1,181 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Evin Wish Archive - Mic Test</title>
-</head>
-<body>
-  <h2>Microphone Test</h2>
-  <button onclick="testMic()">Test Microphone</button>
-  <p id="status">Waiting...</p>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Evin's Wish Archive</title>
 
-  <script>
-    async function testMic() {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        document.getElementById("status").innerText =
-          "Microphone working successfully!";
-        stream.getTracks().forEach(track => track.stop());
-      } catch (error) {
-        document.getElementById("status").innerText =
-          "Error: " + error.message;
-      }
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f3ef;
+      text-align: center;
+      padding: 30px 15px;
+      color: #292929;
     }
-  </script>
-</body>
-</html>
+
+    .container {
+      max-width: 420px;
+      margin: auto;
+      background: white;
+      padding: 30px 20px;
+      border-radius: 18px;
+    }
+
+    h1 { font-size: 27px; }
+    p { color: #666; }
+
+    button {
+      width: 100%;
+      padding: 16px;
+      margin: 10px 0;
+      border: none;
+      border-radius: 10px;
+      background: #292929;
+      color: white;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    button:disabled { opacity: 0.5; }
+
+    input {
+      width: 90%;
+      padding: 13px;
+      margin: 15px 0;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 16px;
+    }
+
+    .hidden { display: none; }
+
+    .wish {
+      background: #f5f3ef;
+      padding: 15px;
+      margin: 12px 0;
+      border-radius: 10px;
+    }
+  </style>
+</head>
+
+<body>
+<div class="container">
+
+  <h1>EVIN'S WISH ARCHIVE</h1>
+  <p>A collection of voices, love and memories.</p>
+
+  <div id="home">
+    <button onclick="showRecord()">🎙️ Record a Wish</button>
+    <button onclick="showWishes()">🎧 Hear the Wishes</button>
+  </div>
+
+  <div id="record" class="hidden">
+    <h2>Leave a Wish</h2>
+
+    <input id="name" placeholder="Your Name">
+
+    <button id="start" onclick="startRecording()">Start Recording</button>
+    <button id="stop" onclick="stopRecording()" disabled>Stop Recording</button>
+
+    <audio id="preview" controls class="hidden"></audio>
+
+    <button id="submit" onclick="submitWish()" disabled>Submit Wish</button>
+
+    <p id="recordStatus"></p>
+    <button onclick="goHome()">← Back</button>
+  </div>
+
+  <div id="wishes" class="hidden">
+    <h2>Recorded Wishes</h2>
+    <div id="wishList">Loading...</div>
+    <button onclick="goHome()">← Back</button>
+  </div>
+
+</div>
+
+<script>
+const API_URL = "https://script.google.com/macros/s/AKfycbwAkIu9R5oa5xR5M707gUcWeEnAr1kGqnBLTDxHDnmdDLK421H8NSfBNExU7rB-51Bs3Q/exec";
+
+let recorder;
+let audioChunks = [];
+let audioBlob;
+
+function hideAll() {
+  document.getElementById("home").classList.add("hidden");
+  document.getElementById("record").classList.add("hidden");
+  document.getElementById("wishes").classList.add("hidden");
+}
+
+function goHome() {
+  hideAll();
+  document.getElementById("home").classList.remove("hidden");
+}
+
+function showRecord() {
+  hideAll();
+  document.getElementById("record").classList.remove("hidden");
+}
+
+function showWishes() {
+  hideAll();
+  document.getElementById("wishes").classList.remove("hidden");
+
+  const callbackName = "wishCallback";
+
+  window[callbackName] = function(wishes) {
+    displayWishes(wishes);
+    delete window[callbackName];
+    script.remove();
+  };
+
+  const script = document.createElement("script");
+  script.src = API_URL + "?callback=" + callbackName;
+  script.onerror = function() {
+    document.getElementById("wishList").innerText =
+      "Unable to load wishes. Please try again.";
+  };
+
+  document.body.appendChild(script);
+}
+
+async function startRecording() {
+  try {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      throw new Error("Microphone access is not supported in this browser.");
+    }
+
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+    if (!window.MediaRecorder) {
+      throw new Error("Audio recording is not supported in this browser.");
+    }
+
+    const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+      ? "audio/webm;codecs=opus"
+      : "audio/webm";
+
+    recorder = new MediaRecorder(stream, { mimeType });
+    audioChunks = [];
+
+    recorder.ondataavailable = event => {
+      if (event.data.size > 0) audioChunks.push(event.data);
+    };
+
+    recorder.onstop = () => {
+      audioBlob = new Blob(audioChunks, { type: recorder.mimeType });
+
+      const preview = document.getElementById("preview");
+      preview.src = URL.createObjectURL(audioBlob);
+      preview.classList.remove("hidden");
+
+      document.getElementById("submit").disabled = false;
+      stream.getTracks().forEach(track => track.stop());
+    };
+
+    recorder.start();
+
+    document.getElementById("start").disabled = true;
+    document.getElementById("stop").disabled = false;
+    document.getElementById("recordStatus").innerText =
+     
