@@ -56,10 +56,16 @@
       margin: 12px 0;
       border-radius: 10px;
     }
+
+    audio {
+      width: 100%;
+      margin-top: 10px;
+    }
   </style>
 </head>
 
 <body>
+
 <div class="container">
 
   <h1>EVIN'S WISH ARCHIVE</h1>
@@ -95,6 +101,7 @@
 </div>
 
 <script>
+
 const API_URL = "https://script.google.com/macros/s/AKfycbwAkIu9R5oa5xR5M707gUcWeEnAr1kGqnBLTDxHDnmdDLK421H8NSfBNExU7rB-51Bs3Q/exec";
 
 let recorder;
@@ -121,7 +128,10 @@ function showWishes() {
   hideAll();
   document.getElementById("wishes").classList.remove("hidden");
 
+  document.getElementById("wishList").innerText = "Loading...";
+
   const callbackName = "wishCallback";
+  const script = document.createElement("script");
 
   window[callbackName] = function(wishes) {
     displayWishes(wishes);
@@ -129,11 +139,13 @@ function showWishes() {
     script.remove();
   };
 
-  const script = document.createElement("script");
   script.src = API_URL + "?callback=" + callbackName;
+
   script.onerror = function() {
     document.getElementById("wishList").innerText =
       "Unable to load wishes. Please try again.";
+    delete window[callbackName];
+    script.remove();
   };
 
   document.body.appendChild(script);
@@ -159,7 +171,9 @@ async function startRecording() {
     audioChunks = [];
 
     recorder.ondataavailable = event => {
-      if (event.data.size > 0) audioChunks.push(event.data);
+      if (event.data.size > 0) {
+        audioChunks.push(event.data);
+      }
     };
 
     recorder.onstop = () => {
@@ -170,6 +184,7 @@ async function startRecording() {
       preview.classList.remove("hidden");
 
       document.getElementById("submit").disabled = false;
+
       stream.getTracks().forEach(track => track.stop());
     };
 
@@ -178,4 +193,112 @@ async function startRecording() {
     document.getElementById("start").disabled = true;
     document.getElementById("stop").disabled = false;
     document.getElementById("recordStatus").innerText =
-     
+      "Recording in progress...";
+
+  } catch (error) {
+    alert(error.message);
+  }
+}
+
+function stopRecording() {
+  if (recorder && recorder.state === "recording") {
+    recorder.stop();
+  }
+
+  document.getElementById("start").disabled = false;
+  document.getElementById("stop").disabled = true;
+  document.getElementById("recordStatus").innerText =
+    "Recording completed. Preview your wish.";
+}
+
+async function submitWish() {
+  const name = document.getElementById("name").value.trim();
+
+  if (!name) {
+    alert("Please enter your name.");
+    return;
+  }
+
+  if (!audioBlob) {
+    alert("Please record a wish first.");
+    return;
+  }
+
+  const submitButton = document.getElementById("submit");
+  submitButton.disabled = true;
+
+  document.getElementById("recordStatus").innerText =
+    "Submitting your wish...";
+
+  try {
+    const base64Audio = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+
+      reader.onloadend = () => {
+        if (reader.error) {
+          reject(reader.error);
+        } else {
+          resolve(reader.result.split(",")[1]);
+        }
+      };
+
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(audioBlob);
+    });
+
+    const data = {
+      name: name,
+      audio: base64Audio,
+      mimeType: audioBlob.type
+    };
+
+    await fetch(API_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: {
+        "Content-Type": "text/plain;charset=utf-8"
+      },
+      body: JSON.stringify(data)
+    });
+
+    document.getElementById("recordStatus").innerText =
+      "Your wish has been sent. Please allow a moment for it to appear in the archive.";
+
+  } catch (error) {
+    alert("Unable to submit your wish. Please try again.");
+    submitButton.disabled = false;
+    document.getElementById("recordStatus").innerText =
+      "Submission failed.";
+  }
+}
+
+function displayWishes(wishes) {
+  const list = document.getElementById("wishList");
+  list.innerHTML = "";
+
+  if (!wishes || wishes.length === 0) {
+    list.innerText = "No wishes recorded yet.";
+    return;
+  }
+
+  wishes.forEach(wish => {
+    const item = document.createElement("div");
+    item.className = "wish";
+
+    const name = document.createElement("h3");
+    name.textContent = wish.name || "Anonymous";
+
+    const audio = document.createElement("audio");
+    audio.controls = true;
+    audio.src = wish.url;
+
+    item.appendChild(name);
+    item.appendChild(audio);
+    list.appendChild(item);
+  });
+}
+
+</script>
+
+</body>
+</html>
