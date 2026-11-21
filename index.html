@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html>
 <head>
@@ -73,7 +74,7 @@
 
   <div id="home">
     <button onclick="showRecord()">🎙️ Record a Wish</button>
-    <button onclick="showWishes()">🎧 Hear the Wishes</button>
+    <button onclick="showWishes()">🎧 People Who Left Their Wishes</button>
   </div>
 
   <div id="record" class="hidden">
@@ -93,7 +94,7 @@
   </div>
 
   <div id="wishes" class="hidden">
-    <h2>Recorded Wishes</h2>
+    <h2>People Who Left Their Wishes ❤️</h2>
     <div id="wishList">Loading...</div>
     <button onclick="goHome()">← Back</button>
   </div>
@@ -286,14 +287,9 @@ function displayWishes(wishes) {
     item.className = "wish";
 
     const name = document.createElement("h3");
-    name.textContent = wish.name || "Anonymous";
-
-    const audio = document.createElement("audio");
-    audio.controls = true;
-    audio.src = wish.url;
+    name.textContent = "❤️ " + (wish.name || "Anonymous");
 
     item.appendChild(name);
-    item.appendChild(audio);
     list.appendChild(item);
   });
 }
@@ -302,3 +298,4 @@ function displayWishes(wishes) {
 
 </body>
 </html>
+```
